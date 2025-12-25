@@ -1,4 +1,3 @@
-// backend/index.js
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
@@ -18,7 +17,7 @@ app.use(bodyParser.json());
 const sequelize = new Sequelize({
   dialect: "sqlite",
   storage: path.join(__dirname, "database.sqlite"),
-  logging: false, // prevents leaking info in logs
+  logging: false, 
 });
 
 // =======================
@@ -87,15 +86,7 @@ app.get("/api/pools", async (req, res) => {
 app.post("/api/contributions/pay", async (req, res) => {
   const { poolId, user_name, phone, amount } = req.body;
 
-  // 🔐 Input validation
-  if (
-    !poolId ||
-    !user_name ||
-    !phone ||
-    !amount ||
-    isNaN(amount) ||
-    amount <= 0
-  ) {
+  if (!poolId || !user_name || !phone || !amount || isNaN(amount) || amount <= 0) {
     return res.status(400).json({ error: "Invalid or missing fields" });
   }
 
@@ -123,20 +114,32 @@ app.post("/api/contributions/pay", async (req, res) => {
   }
 });
 
-// =======================
-// SERVE FRONTEND
-// =======================
-const frontendPath = path.join(__dirname, "../frontend");
+// ==========================================
+// SERVE FRONTEND (MODIFIED FOR PLAIN HTML)
+// ==========================================
+// This goes UP from backend/ to the root, then INTO frontend/
+const frontendPath = path.resolve(__dirname, "..", "frontend");
+
+// Serve all static files in the frontend folder (CSS, images, etc.)
 app.use(express.static(frontendPath));
 
+// Route all other requests to index.html
 app.get("*", (req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
+  const indexPath = path.join(frontendPath, "index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error("CRITICAL: Cannot find index.html at " + indexPath);
+      res.status(404).send("Frontend folder or index.html not found on server.");
+    }
+  });
 });
 
 // =======================
 // START SERVER
 // =======================
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`Backend running on port ${PORT}`)
-);
+// Render uses 10000 by default, but we use process.env.PORT to be safe
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`Backend running on port ${PORT}`);
+  console.log(`Serving frontend from: ${frontendPath}`);
+});
