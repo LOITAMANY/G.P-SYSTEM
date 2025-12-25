@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elite Gaming Pool</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+body { margin:0; min-height:100vh; background: linear-gradient(135deg,#6a11cb,#2575fc); display:flex; justify-content:center; align-items:center; }
+.card { background:#fff; width:100%; max-width:420px; padding:25px; border-radius:18px; box-shadow:0 20px 40px rgba(0,0,0,.25); animation: slideUp .6s ease; }
+@keyframes slideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+h1 { text-align:center; margin-bottom:5px; }
+p { text-align:center; color:#64748b; }
+input, button { width:100%; padding:12px; margin-top:12px; border-radius:10px; border:1px solid #cbd5e1; transition:.3s; }
+input:focus { border-color:#6a11cb; outline:none; }
+button { background:#6a11cb; color:#fff; font-weight:600; border:none; cursor:pointer; }
+button:hover { opacity:.9; }
+.status { text-align:center; margin-top:10px; font-weight:500; min-height:20px; }
+ul { padding:0; margin-top:15px; }
+li { list-style:none; background:#f1f5f9; padding:10px; margin-top:8px; border-radius:10px; display:flex; justify-content:space-between; transition:.3s; }
+li:hover { background:#e2e8f0; }
+.badge { background:#6a11cb; color:white; padding:4px 8px; border-radius:8px; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Elite Gaming Pool</h1>
+  <p>Fast • Secure • Simple</p>
+
+  <form id="form">
+    <input id="name" placeholder="Your Name" required>
+    <input id="phone" placeholder="07XXXXXXXX" required>
+    <input id="amount" type="number" placeholder="Amount (KES)" required>
+    <button type="submit">Pay</button>
+  </form>
+
+  <div class="status" id="status"></div>
+
+  <h3>Pool Balance</h3>
+  <ul id="pools"></ul>
+</div>
+
+<script>
+const form = document.getElementById('form');
+const status = document.getElementById('status');
+const pools = document.getElementById('pools');
+
+const name = document.getElementById('name');
+const phone = document.getElementById('phone');
+const amount = document.getElementById('amount');
+
+async function loadPools() {
+  try {
+    const res = await fetch('/api/pools');
+    const text = await res.text();
+    let data = [];
+    try { data = JSON.parse(text); } catch(e) { status.textContent = "Failed to load pools"; status.style.color='red'; return; }
+    pools.innerHTML = '';
+    data.forEach(p => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span>${p.name}</span><span class="badge">KES ${p.total_amount}</span>`;
+      pools.appendChild(li);
+    });
+  } catch(err) { status.textContent="Failed to fetch pools"; status.style.color='red'; }
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  status.textContent = 'Processing...';
+  status.style.color = '#000';
+
+  try {
+    const res = await fetch('/api/contributions/pay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        poolId: 1,
+        user_name: name.value,
+        phone: phone.value,
+        amount: amount.value
+      })
+    });
+
+    const text = await res.text();
+    let data = {};
+    try { data = JSON.parse(text); } catch(e) { status.textContent = "Payment failed"; status.style.color='red'; return; }
+
+    if (!res.ok) throw new Error(data.error || "Server error");
+    status.textContent = data.message;
+    status.style.color = 'green';
+    form.reset();
+    loadPools();
+  } catch(err) { status.textContent = err.message; status.style.color='red'; }
+});
+
+// Load pools on page load
+loadPools();
+</script>
+</body>
+</html>
